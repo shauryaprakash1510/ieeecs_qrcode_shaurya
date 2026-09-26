@@ -3,10 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+// Helper function: only instantiates when a request actually arrives
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-  return createClient(url, key);
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://hwimpyhxwwgjyldrekpf.supabase.co";
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "build-placeholder-key";
+
+  return createClient(supabaseUrl, supabaseKey);
 }
 
 export async function POST(req: Request) {
