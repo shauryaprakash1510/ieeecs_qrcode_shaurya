@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+  return createClient(url, key);
+}
 
 export async function POST(req: Request) {
   try {
+    const supabase = getSupabase();
     const body = await req.json();
     const { participantId, mode, mealSession, scannerId } = body;
 
@@ -31,12 +32,8 @@ export async function POST(req: Request) {
       if (error) throw error;
       return NextResponse.json(data);
     } else {
-      // Default to dinner access
       const activeSession =
-        mealSession && mealSession.trim() !== ""
-          ? mealSession.trim()
-          : "OCT_08_DINNER";
-
+        mealSession && mealSession.trim() !== "" ? mealSession.trim() : "OCT_08_DINNER";
       const { data, error } = await supabase.rpc("verify_meal_access", {
         p_id: cleanId,
         p_session: activeSession,
@@ -53,4 +50,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
