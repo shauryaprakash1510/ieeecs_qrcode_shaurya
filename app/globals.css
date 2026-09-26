@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+/* ============================================
+   Event Check-in System — Global Styles
+   Dark-first, mobile-optimized for venue use
+   ============================================ */
+
+:root {
+  --color-success: #059669;
+  --color-success-bg: #065f46;
+  --color-warning: #d97706;
+  --color-warning-bg: #92400e;
+  --color-error: #e11d48;
+  --color-error-bg: #9f1239;
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #171717;
+  --color-bg-tertiary: #262626;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a3a3a3;
+  --color-border: #404040;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@keyframes laserSweep {
+  0% {
+    top: 4%;
+    opacity: 0.7;
+  }
+  50% {
+    top: 92%;
+    opacity: 1;
+  }
+  100% {
+    top: 4%;
+    opacity: 0.7;
+  }
+}
+
+.scanner-laser-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #10b981 15%, #34d399 50%, #10b981 85%, transparent);
+  box-shadow: 0 0 14px 3px rgba(16, 185, 129, 0.8), 0 0 24px 6px rgba(52, 211, 153, 0.5);
+  border-radius: 9999px;
+  animation: laserSweep 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* ---- Scanner viewport ---- */
+#qr-reader {
+  border: none !important;
+  border-radius: 0px;
+  overflow: hidden;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+}
+
+#qr-reader video {
+  object-fit: cover !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Hide html5-qrcode default UI chrome, text, buttons, and file selectors */
+#qr-reader__scan_region {
+  min-height: unset !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+#qr-reader__scan_region img {
+  display: none !important;
+}
+
+#qr-reader__dashboard,
+#qr-reader__dashboard_section_csr,
+#qr-reader__dashboard_section_swaplink,
+#qr-reader__status_span,
+#qr-reader__header_message,
+#qr-reader__camera_selection,
+#qr-reader__fileselection_section {
+  display: none !important;
+}
+
+#qr-reader button,
+#qr-reader select,
+#qr-reader input,
+#qr-reader a {
+  display: none !important;
+}
+
+/* ---- Scan result overlay animations ---- */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes pulseScale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.scan-result-enter {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.scan-result-exit {
+  animation: slideDown 0.25s ease-in forwards;
+}
+
+.pulse-icon {
+  animation: pulseScale 0.6s ease-in-out;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* ---- Scrollbar for dashboard ---- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/* ---- Utility: full viewport scanner ---- */
+.scanner-viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
