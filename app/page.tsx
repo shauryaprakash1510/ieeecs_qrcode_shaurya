@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { QrCode, Utensils, ClipboardCheck, ArrowRight, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { QrCode, Utensils, ClipboardCheck, ArrowRight, LayoutDashboard, ShieldCheck, Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +70,8 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Dashboard Link */}
-        <div className="pt-4 border-t border-neutral-800/80">
+        {/* Dashboard Link & Session Control */}
+        <div className="pt-4 border-t border-neutral-800/80 flex flex-col items-center gap-2.5">
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-400 hover:text-white px-4 py-2 rounded-xl bg-neutral-900/50 hover:bg-neutral-800 border border-neutral-800 transition"
@@ -79,6 +79,13 @@ export default function HomePage() {
             <LayoutDashboard className="w-3.5 h-3.5 text-neutral-400" />
             Open Organizer Live Dashboard →
           </Link>
+          <a
+            href="/api/auth/logout"
+            className="inline-flex items-center gap-1.5 text-[11px] text-neutral-500 hover:text-neutral-300 py-1 transition"
+          >
+            <Lock className="w-3 h-3" />
+            Lock Portal Session
+          </a>
         </div>
       </div>
     </main>

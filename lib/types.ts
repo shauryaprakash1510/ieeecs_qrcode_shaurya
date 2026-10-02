@@ -101,6 +101,11 @@ export type ScanResult =
 /** Request body for POST /api/scan */
 export interface ScanRequest {
   participantId: string;
+  name?: string;
+  email?: string;
+  mobileNumber?: string;
+  organization?: string;
+  eventId?: string;
   mode: ScanMode;
   mealSession?: MealSessionId;
   scannerId?: string;

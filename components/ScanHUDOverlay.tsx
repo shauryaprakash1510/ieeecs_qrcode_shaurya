@@ -29,7 +29,9 @@ export default function ScanHUDOverlay({
     if (soundPlayedRef.current) return;
     soundPlayedRef.current = true;
 
-    if (result.status === "SUCCESS") {
+    const isSuccess = result.status === "SUCCESS" || (result.status as string) === "REGISTRATION_SUCCESS";
+
+    if (isSuccess) {
       playSuccessChime();
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate([100, 50, 100]);
@@ -88,8 +90,10 @@ export default function ScanHUDOverlay({
     (result as any).redeemed_at ||
     (result as any).registered_at;
 
+  const isSuccess = result.status === "SUCCESS" || (result.status as string) === "REGISTRATION_SUCCESS";
+
   const bgClass =
-    result.status === "SUCCESS"
+    isSuccess
       ? "bg-emerald-600 text-white"
       : result.status === "ALREADY_REGISTERED" || result.status === "ALREADY_USED"
       ? "bg-amber-600 text-white"
@@ -118,7 +122,7 @@ export default function ScanHUDOverlay({
       {/* Main Flash Result Center Content */}
       <div className="w-full max-w-sm flex flex-col items-center text-center my-auto">
         {/* SUCCESS */}
-        {result.status === "SUCCESS" && (
+        {isSuccess && (
           <div className="flex flex-col items-center animate-in zoom-in-95 duration-150">
             <div className="w-24 h-24 rounded-full bg-white/20 border-4 border-white flex items-center justify-center mb-5 shadow-2xl animate-bounce">
               <CheckCircle2 className="w-16 h-16 text-white stroke-[2.5]" />

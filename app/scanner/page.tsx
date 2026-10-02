@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import dynamicComponent from "next/dynamic";
 import ScanHUDOverlay from "@/components/ScanHUDOverlay";
-import { initAudio } from "@/lib/sound";
+import { initAudio, playSuccessChime, playErrorBuzz } from "@/lib/sound";
 
 const ScannerFeed = dynamicComponent(() => import("@/components/ScannerFeed"), {
   ssr: false,
@@ -36,6 +36,8 @@ import {
   type MealSessionId,
   type ScannerId,
   type Participant,
+  type ScanRequest,
+  type QRPayload,
 } from "@/lib/types";
 
 function ScannerContent() {
@@ -118,17 +120,27 @@ function ScannerContent() {
   /**
    * Safely extract ticket data from the ticketing partner's JSON payload or raw text
    */
-  const parseQRPayload = (
-    raw: string
-  ): { participantId: string; name?: string; organization?: string } => {
+  const parseQRPayload = (raw: string): QRPayload => {
     try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.participantId === "string" && parsed.participantId.trim()) {
-        return {
-          participantId: parsed.participantId.trim(),
-          name: typeof parsed.name === "string" ? parsed.name.trim() : undefined,
-          organization: typeof parsed.organization === "string" ? parsed.organization.trim() : undefined,
-        };
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (parsed && typeof parsed === "object") {
+        const participantId =
+          parsed.participantId ||
+          parsed.participant_id ||
+          parsed.id ||
+          parsed.ticketId ||
+          parsed.ticket_id;
+
+        if (participantId && typeof participantId === "string" && participantId.trim()) {
+          return {
+            participantId: participantId.trim(),
+            name: (parsed.name || parsed.fullName || parsed.full_name || parsed.attendeeName || parsed.attendee_name)?.toString()?.trim() || undefined,
+            email: (parsed.email || parsed.emailAddress || parsed.email_address)?.toString()?.trim() || undefined,
+            mobileNumber: (parsed.mobileNumber || parsed.mobile_number || parsed.mobile || parsed.phone || parsed.phoneNumber || parsed.phone_number)?.toString()?.trim() || undefined,
+            organization: (parsed.organization || parsed.org || parsed.company || parsed.affiliation || parsed.institution)?.toString()?.trim() || undefined,
+            eventId: (parsed.eventId || parsed.event_id || parsed.event)?.toString()?.trim() || undefined,
+          };
+        }
       }
     } catch {
       // Raw string fallback
@@ -137,72 +149,80 @@ function ScannerContent() {
   };
 
   /**
-   * Process a scanned or manually entered participant ID with online RPC and offline queue fallback
+   * Process a scanned or manually entered participant ID with online RPC and auto-clear timer
    */
   const processVerification = useCallback(
-    async (rawId: string) => {
+    async (decodedText: string) => {
       if (isLocked) return;
-
       setIsLocked(true);
       initAudio();
 
-      const qrData = parseQRPayload(rawId);
-      const participantId = qrData.participantId;
-
-      if (!participantId) {
-        setScanResult({
-          status: "INVALID",
-          message: "Missing or invalid participant ticket ID in QR",
-        });
-        return;
-      }
-
-      const scanRequest = {
-        participantId,
-        mode,
-        mealSession: mode === "dinner" ? mealSession : undefined,
-        scannerId,
-      };
-
       try {
-        const res = await fetch("/api/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(scanRequest),
+        // 1. Parse JSON payload from ticketing provider
+        let attendeeData: {
+          participantId: string;
+          eventId?: string;
+          name?: string;
+          email?: string;
+          mobileNumber?: string;
+          organization?: string;
+        } = { participantId: decodedText.trim() };
+
+        try {
+          const parsed = JSON.parse(decodedText);
+          const pId = parsed.participantId || parsed.participant_id || parsed.id;
+          if (pId) {
+            attendeeData = {
+              participantId: String(pId).trim(),
+              eventId: parsed.eventId ? String(parsed.eventId).trim() : parsed.event_id ? String(parsed.event_id).trim() : '',
+              name: parsed.name ? String(parsed.name).trim() : parsed.fullName ? String(parsed.fullName).trim() : '',
+              email: parsed.email ? String(parsed.email).trim() : '',
+              mobileNumber: parsed.mobileNumber ? String(parsed.mobileNumber).trim() : parsed.phone ? String(parsed.phone).trim() : '',
+              organization: parsed.organization ? String(parsed.organization).trim() : parsed.org ? String(parsed.org).trim() : '',
+            };
+          }
+        } catch {
+          // Plain text / standard barcode fallback
+          attendeeData = { participantId: decodedText.trim() };
+        }
+
+        // 2. Transmit complete payload to API
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...attendeeData,
+            mode,
+            mealSession: mealSession,
+            scannerId: `mobile-${mode}-scanner`,
+          }),
         });
 
-        const data: ScanResult = await res.json();
-        setScanResult(data);
+        const result = await res.json();
+        setScanResult(result);
 
-        if (data.status === "SUCCESS") {
-          setScanCount((prev) => prev + 1);
+        if (result.status === 'SUCCESS' || result.status === 'REGISTRATION_SUCCESS') {
+          playSuccessChime();
+          setScanCount((prev: number) => prev + 1);
+        } else {
+          playErrorBuzz();
         }
-      } catch (err: any) {
-        console.warn("Scan network error — storing in offline sync queue:", err);
 
-        // Offline storage fallback using idb
-        try {
-          const { enqueueOfflineScan, getOfflineQueueCount } = await import("@/lib/offline");
-          await enqueueOfflineScan(scanRequest);
-          const count = await getOfflineQueueCount();
-          setOfflinePendingCount(count);
-
-          setScanResult({
-            status: "SUCCESS",
-            name: qrData.name || "Offline Ticket",
-            organization: qrData.organization || "Queued for Sync",
-            meal_session: mode === "dinner" ? mealSession : undefined,
-          });
-          setScanCount((prev) => prev + 1);
-        } catch {
-          setScanResult({
-            status: "ERROR",
-            message: "Network unreachable and local storage failed",
-          });
-        }
+        // 3. Auto-clear HUD after 2.2 seconds
+        setTimeout(() => {
+          setScanResult(null);
+          setIsLocked(false);
+        }, 2200);
+      } catch (err) {
+        playErrorBuzz();
+        setScanResult({ status: 'ERROR', message: 'Failed to verify code' });
+        setTimeout(() => {
+          setScanResult(null);
+          setIsLocked(false);
+        }, 2200);
       }
     },
-    [isLocked, mode, mealSession, scannerId]
+    [isLocked, mode, mealSession]
   );
 
   /**
