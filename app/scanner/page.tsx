@@ -207,19 +207,9 @@ function ScannerContent() {
         } else {
           playErrorBuzz();
         }
-
-        // 3. Auto-clear HUD after 2.2 seconds
-        setTimeout(() => {
-          setScanResult(null);
-          setIsLocked(false);
-        }, 2200);
       } catch (err) {
         playErrorBuzz();
         setScanResult({ status: 'ERROR', message: 'Failed to verify code' });
-        setTimeout(() => {
-          setScanResult(null);
-          setIsLocked(false);
-        }, 2200);
       }
     },
     [isLocked, mode, mealSession]
@@ -605,7 +595,6 @@ function ScannerContent() {
           mode={mode}
           mealSession={mealSession}
           onDismiss={handleDismissOverlay}
-          autoDismissMs={2000}
         />
       )}
     </div>
